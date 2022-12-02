@@ -18,14 +18,6 @@ mapsum([List|T], [Sum|Sums]) :-
     sum(List, #=, Sum),
     mapsum(T, Sums).
 
-% the problem with running this backwards is the sorting in top_three/4
-% using permutation + checking sorted property is wayyy too slow
-test_reverse(X) :-
-    length(X, 3),
-    maplist([L]>>(length(L,N), N in 1..3, L ins 1..3), X),
-    top_three(X, 1, 2, 3),
-    maplist(label, X).
-
 % impure
 run :-
     input_stream(1, parse([])),
@@ -34,3 +26,13 @@ run :-
     write_part1(A),
     N #= A+B+C,
     write_part2(N).
+
+% BONUS: testing the reverse
+% the problem with running this backwards is the sorting in top_three/4
+% using permutation + checking sorted property is wayyy too slow
+test_reverse(X) :-
+    length(X, 3),
+    maplist([L]>>(length(L,N), N in 1..3, L ins 1..3), X),
+    top_three(X, 1, 2, 3),
+    maplist(label, X).
+
