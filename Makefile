@@ -28,6 +28,8 @@ go2:
 	@go run 02/day02.go
 pl2:
 	@swipl -q -l 02/day02.pl -t run
+scm2:
+	@scheme --script 02/day02.scm
 
 go3:
 	@go run 03/day03.go
