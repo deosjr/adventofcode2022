@@ -18,19 +18,21 @@ func priority(c rune) int {
     return int(c) - 38
 }
 
+// for small sets, using array lookup is way faster than a map
+// see day03_test for benchmarks
 func overlap(in ...string) rune {
-    sets := []map[rune]struct{}{}
-    for _, s := range in {
-        set := map[rune]struct{}{}
+    sets := [][]struct{}{}
+    for _, s := range in[1:] {
+        set := make([]struct{}, 200)
         for _, c := range s {
             set[c] = struct{}{}
         }
         sets = append(sets, set)
     }
 Loop:
-    for k := range sets[0] {
-        for _, set := range sets[1:] {
-            if _, ok := set[k]; !ok {
+    for _, k := range in[0] {
+        for _, set := range sets {
+            if set[int(k)] != struct{}{} {
                 continue Loop
             }
         }

@@ -9,10 +9,6 @@ import (
 	"github.com/deosjr/adventofcode2022/lib"
 )
 
-// NOTE on benchmarking: search in array vs in map?
-// for small arrays might be faster to not compute hashes..
-// see for example https://kokes.github.io/blog/2020/07/20/tiny-maps-arrays-go.html
-
 // commands for building with buildinfo, and disassembly
 // go build -gcflags -S 01/day01.go 01/day01_alternatives.go
 // go tool objdump day01
@@ -26,19 +22,19 @@ func init() {
     lib.NoOutput()
 }
 
-func BenchmarkBasic(b *testing.B) {
+func Benchmark01Basic(b *testing.B) {
     for n := 0; n < b.N; n++ {
         day01()
     }
 }
 
-func BenchmarkLineByLine(b *testing.B) {
+func Benchmark01LineByLine(b *testing.B) {
     for n := 0; n < b.N; n++ {
         day01_linebyline()
     }
 }
 
-func BenchmarkConcurrent(b *testing.B) {
+func Benchmark01Concurrent(b *testing.B) {
     for n := 0; n < b.N; n++ {
         day01_mapreduce()
     }
