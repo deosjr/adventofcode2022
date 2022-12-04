@@ -32,15 +32,17 @@ run :-
     write_part2(Ans2).
 
 % BONUS: testing the reverse:
-% generating past include/exclude leads to interesting behaviour
-% test_reverse1(X,1) only generates lists of length 1
-% test_reverse2(X,1) diverges immediately (generates infinite Y=0 examples first)
+% only complete once maplist moved _before_ part1/2 check!
+assignment(X) :-
+    length(X, 4),
+    X ins 1..3.
+
 test_reverse1(X, Y) :-
-    part1(X, Y),
-    maplist([A]>>(A ins 1..99), X),
-    maplist(label, X).
+    maplist(assignment, X),
+    maplist(label, X),
+    part1(X, Y).
 
 test_reverse2(X, Y) :-
-    part2(X, Y),
-    maplist([A]>>(A ins 1..99), X),
-    maplist(label, X).
+    maplist(assignment, X),
+    maplist(label, X),
+    part2(X, Y).
