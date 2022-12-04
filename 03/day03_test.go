@@ -54,15 +54,23 @@ Loop:
     panic("no overlap")
 }
 
-func overlapStrings(in ...string) rune {
+func overlapArrays(in ...string) rune {
+    sets := [][]bool{}
+    for _, s := range in[1:] {
+        set := make([]bool, 200)
+        for _, c := range s {
+            set[c] = true
+        }
+        sets = append(sets, set)
+    }
 Loop:
-    for _, c := range in[0] {
-        for _, s := range in[1:] {
-            if !strings.ContainsRune(s, c) {
+    for _, k := range in[0] {
+        for _, set := range sets {
+            if !set[int(k)] {
                 continue Loop
             }
         }
-        return c
+        return k
     }
     panic("no overlap")
 }
@@ -78,7 +86,7 @@ func part2_maps(in []string) int {
 func part2_arrays(in []string) int {
     sum := 0
     for i:=0; i<len(in); i+= 3 {
-        sum += int(overlap(in[i], in[i+1], in[i+2]))
+        sum += int(overlapArrays(in[i], in[i+1], in[i+2]))
     }
     return sum
 }
@@ -86,7 +94,7 @@ func part2_arrays(in []string) int {
 func part2_strings(in []string) int {
     sum := 0
     for i:=0; i<len(in); i+= 3 {
-        sum += int(overlapStrings(in[i], in[i+1], in[i+2]))
+        sum += int(overlap(in[i], in[i+1], in[i+2]))
     }
     return sum
 }

@@ -19,24 +19,17 @@ func priority(c rune) int {
 }
 
 // for small sets, using array lookup is way faster than a map
+// but builtin strings.ContainsRune is even faster
 // see day03_test for benchmarks
 func overlap(in ...string) rune {
-    sets := [][]struct{}{}
-    for _, s := range in[1:] {
-        set := make([]struct{}, 200)
-        for _, c := range s {
-            set[c] = struct{}{}
-        }
-        sets = append(sets, set)
-    }
 Loop:
-    for _, k := range in[0] {
-        for _, set := range sets {
-            if set[int(k)] != struct{}{} {
+    for _, c := range in[0] {
+        for _, s := range in[1:] {
+            if !strings.ContainsRune(s, c) {
                 continue Loop
             }
         }
-        return k
+        return c
     }
     panic("no overlap")
 }

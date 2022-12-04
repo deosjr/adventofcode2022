@@ -35,6 +35,8 @@ go3:
 	@go run 03/day03.go
 pl3:
 	@swipl -q -l 03/day03.pl -t run
+scm3:
+	@scheme --script 03/day03.scm
 
 go4:
 	@go run 04/day04.go
