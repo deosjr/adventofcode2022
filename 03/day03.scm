@@ -19,17 +19,18 @@
       (let ((rec (take (- n 1) (cdr s))))
         (cons (cons (car s) (car rec)) (cdr rec)))]))
 
-(define (contains? s c)
+(define (contains? c s)
   (cond
     [(null? s) #f]
     [(eq? (car s) c) #t]
-    [else (contains? (cdr s) c)]))
+    [else (contains? c (cdr s))]))
 
-(define (overlap a b)
+(define (overlap a . b)
   (cond
     [(null? a) #f]
-    [(contains? b (car a)) (car a)]
-    [else (overlap (cdr a) b)]))
+    ; wasteful check, but nice practise to write variadic func
+    [(not (contains? #f (map (lambda (x) (contains? (car a) x)) b))) (car a)]
+    [else (apply overlap (cdr a) b)]))
 
 (define (priority c)
   (let ((n (char->integer c)))
@@ -44,3 +45,10 @@
       (+ (priority c) (part1 (cdr in))))))
 
 (write-part1 (part1 input))
+
+(define (part2 in)
+  (if (null? in) 0
+    (let ((c (overlap (car in) (cadr in) (caddr in))))
+      (+ (priority c) (part2 (cdddr in))))))
+
+(write-part2 (part2 input))
