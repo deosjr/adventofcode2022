@@ -25,6 +25,13 @@ func Benchmark03Arrays(b *testing.B) {
     }
 }
 
+func Benchmark03Strings(b *testing.B) {
+    rucksacks := strings.Fields(lib.ReadFile(3))
+    for n := 0; n < b.N; n++ {
+        part2_strings(rucksacks)
+    }
+}
+
 // alternative (original) version of intersection check using map
 func overlapMaps(in ...string) rune {
     sets := []map[rune]struct{}{}
@@ -47,6 +54,18 @@ Loop:
     panic("no overlap")
 }
 
+func overlapStrings(in ...string) rune {
+Loop:
+    for _, c := range in[0] {
+        for _, s := range in[1:] {
+            if !strings.ContainsRune(s, c) {
+                continue Loop
+            }
+        }
+        return c
+    }
+    panic("no overlap")
+}
 
 func part2_maps(in []string) int {
     sum := 0
@@ -60,6 +79,14 @@ func part2_arrays(in []string) int {
     sum := 0
     for i:=0; i<len(in); i+= 3 {
         sum += int(overlap(in[i], in[i+1], in[i+2]))
+    }
+    return sum
+}
+
+func part2_strings(in []string) int {
+    sum := 0
+    for i:=0; i<len(in); i+= 3 {
+        sum += int(overlapStrings(in[i], in[i+1], in[i+2]))
     }
     return sum
 }
