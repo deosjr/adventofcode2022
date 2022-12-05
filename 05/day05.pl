@@ -12,8 +12,7 @@ parse_moves([]) --> eos.
 parse_moves([N-From-To|X]) --> "move ", integer(N), " from ", integer(From), " to ", integer(To), "\n", parse_moves(X).
 
 crane(Crates, [], _, Ans) :-
-    maplist(nth0(0), Crates, Heads),
-    atom_codes(Ans, Heads).
+    maplist(nth0(0), Crates, Ans).
 
 crane(Crates, [N-F-T|Moves], Over9000, Ans) :-
     nth1(F, Crates, From),
@@ -35,7 +34,20 @@ run :-
     input_stream(5, parse(Drawing, Moves)),
     transpose(Drawing, Transposed),
     maplist(exclude(=(empty)), Transposed, Crates),
-    crane(Crates, Moves, false, Ans1),
+    crane(Crates, Moves, false, Atoms1),
+    atom_codes(Ans1, Atoms1),
     write_part1(Ans1),
-    crane(Crates, Moves, true, Ans2),
+    crane(Crates, Moves, true, Atoms2),
+    atom_codes(Ans2, Atoms2),
     write_part2(Ans2).
+
+% BONUS: testing the reverse:
+% use_test_input.
+test_reverse(Moves) :-
+    input_stream(5, parse(Drawing, _)),
+    transpose(Drawing, Transposed),
+    maplist(exclude(=(empty)), Transposed, Crates),
+    string_codes("CMZ", Codes),
+    length(Moves, 4),
+    maplist([X]>>(X=N-F-T, [N,F,T] ins 1..3, label([N,F,T])), Moves),
+    crane(Crates, Moves, false, Codes).
