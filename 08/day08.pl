@@ -49,13 +49,18 @@ view(List, Visible) :-
 view(_, [], []).
 view(Counts, [H|T], [ViewCount|Visible]) :-
     nth0(H, Counts, ViewCount),
-    length(Pref, H),
-    append(Pref, [_|Suf], Counts),
-    maplist([X,Y]>>(Y#=X+1), Suf, Upper), 
-    length(Lower, H),
-    maplist(#=(1), Lower),
-    append(Lower, [1|Upper], NewCounts),
+    update_counts(H, Counts, NewCounts),
     view(NewCounts, T, Visible).
+
+update_counts(_, [], []).
+update_counts(N, [_|T], [1|NT]) :-
+    N #>= 0,
+    NN #= N - 1,
+    update_counts(NN, T, NT).
+update_counts(N, [H|T], [NH|NT]) :-
+    N #< 0,
+    NH #= H + 1,
+    update_counts(N, T, NT).
 
 part2(Trees, Ans) :-
     % rotate grid (not full rotation but good enough)
