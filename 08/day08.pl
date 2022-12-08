@@ -3,6 +3,19 @@
 parse([]) --> eos.
 parse([S|T]) --> string_without("\n", S), "\n", parse(T).
 
+rotate(Grid, Rotate90) :-
+    rotate(Grid, [], Rotate90).
+rotate(Grid, Acc, Acc) :-
+    maplist([X]>>length(X, 0), Grid).
+rotate(Grid, Acc, Rotated) :-
+    maplist([X,Y,Z]>>(X=[Y|Z]), Grid, Heads, Tails),
+    rotate(Tails, [Heads|Acc], Rotated).
+
+rotations(Trees, T90, T180, T270) :-
+    rotate(Trees, T90),
+    rotate(T90, T180),
+    rotate(T180, T270).
+
 % does a sweep in 1 dimension, left to right
 visible([H|T], [x|Visible]) :-
     visible(H, T, Visible).
@@ -17,19 +30,13 @@ visible(N, [H|T], [x|Visible]) :-
 
 % sweep in 4 dimensions and unify
 part1(Trees, Ans) :-
-    % rotate grid (not full rotation but good enough)
-    maplist(reverse, Trees, Reversed),
-    transpose(Trees, Transposed),
-    maplist(reverse, Transposed, TransposedReversed),
+    rotations(Trees, T90, T180, T270),
     % then map and unrotate output
     maplist(visible, Trees, Out),
-    maplist(visible, Reversed, OutR),
-    maplist(reverse, OutR, Out),
-    maplist(visible, Transposed, OutT),
-    transpose(OutT, Out),
-    maplist(visible, TransposedReversed, OutTR),
-    maplist(reverse, OutTR, OutTT),
-    transpose(OutTT, Out),
+    maplist(visible, T90, Out90),
+    maplist(visible, T180, Out180),
+    maplist(visible, T270, Out270),
+    rotations(Out, Out90, Out180, Out270),
     maplist(sumvar, Out, Sums),
     sum(Sums, #=, Ans).
 
@@ -63,19 +70,15 @@ update_counts(N, [H|T], [NH|NT]) :-
     update_counts(N, T, NT).
 
 part2(Trees, Ans) :-
-    % rotate grid (not full rotation but good enough)
-    maplist(reverse, Trees, Reversed),
-    transpose(Trees, Transposed),
-    maplist(reverse, Transposed, TransposedReversed),
+    rotations(Trees, T90, T180, T270),
     % then map and unrotate output
     maplist(view, Trees, Out1),
-    maplist(view, Reversed, OutR),
-    maplist(reverse, OutR, Out2),
-    maplist(view, Transposed, OutT),
-    transpose(OutT, Out3),
-    maplist(view, TransposedReversed, OutTR),
-    maplist(reverse, OutTR, OutTT),
-    transpose(OutTT, Out4),
+    maplist(view, T90, OutT),
+    maplist(view, T180, OutR),
+    maplist(view, T270, OutTR),
+    rotate(OutT, Y), rotate(Y, Z), rotate(Z, Out2),
+    rotate(OutR, X), rotate(X, Out3),
+    rotate(OutTR, Out4),
     % now traverse all 4 grids and build up a fifth
     join(Out1, Out2, Out3, Out4, Scores),
     maplist(max, Scores, Max),
@@ -101,3 +104,13 @@ run :-
     write_part1(Ans1),
     part2(Trees, Ans2),
     write_part2(Ans2).
+
+% BONUS: testing the reverse:
+% part1 is impure due to var/1 but using unification is such a cool trick
+% generates answers just fine for the generic case, but for Score=8
+% it has to crunch to all the possible solutions for Score < 8 first
+test_reverse(Trees, Score) :-
+    Score #>= 0,
+    length(Trees, 5),
+    maplist([X]>>(length(X, 5), X ins 0..9), Trees),
+    part2(Trees, Score).
