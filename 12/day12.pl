@@ -15,7 +15,7 @@ parse(X,Y,Start,End) --> nonblank(C),
 parse(_,Y,Start,End) --> blank,
     {NY #= Y+1}, parse(0,NY,Start,End).
 
-% DFS floodfill
+% breadth-first search floodfill
 floodfill([], [], _).
 floodfill([], [H|T], PathLen) :-
     NewPathLen #= PathLen + 1,
