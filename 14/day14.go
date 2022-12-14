@@ -25,6 +25,8 @@ func parseCoord(s string) coord {
     return coord{x,y}
 }
 
+var source = coord{500, 0}
+
 func day14() {
     grid := map[coord]cell{}
     maxy := 0
@@ -56,74 +58,70 @@ func day14() {
             start = next
         }
     })
+    maxy += 1
 
+    // part1 is destructive so lets use a copy of the grid
     p1grid := map[coord]cell{}
     for k,v := range grid {
-        p1grid[k] = v 
+        p1grid[k] = v
     }
-    source := coord{500, 0}
-    p1 := 0
-Loop:
+    lib.WritePart1("%d", part1(p1grid, maxy))
+    lib.WritePart2("%d", part2(grid, maxy))
+}
+
+func simulate(grid map[coord]cell, sandpos coord) (coord, bool) {
+    if _, ok := grid[coord{sandpos.x, sandpos.y+1}]; !ok {
+        return coord{sandpos.x, sandpos.y+1}, false
+    }
+    if _, ok := grid[coord{sandpos.x-1, sandpos.y+1}]; !ok {
+        return coord{sandpos.x-1, sandpos.y+1}, false
+    }
+    if _, ok := grid[coord{sandpos.x+1, sandpos.y+1}]; !ok {
+        return coord{sandpos.x+1, sandpos.y+1}, false
+    }
+    grid[sandpos] = sand
+    return sandpos, true
+}
+
+func part1(grid map[coord]cell, maxy int) (rested int) {
     for {
         sandpos := source
         for {
-            if sandpos.y == 1000 {
-                break Loop
+            if sandpos.y == maxy {
+                return rested
             }
-            if _, ok := p1grid[coord{sandpos.x, sandpos.y+1}]; !ok {
-                sandpos = coord{sandpos.x, sandpos.y+1}
-                continue
+            newpos, rest := simulate(grid, sandpos)
+            sandpos = newpos
+            if rest {
+                rested++
+                break
             }
-            if _, ok := p1grid[coord{sandpos.x-1, sandpos.y+1}]; !ok {
-                sandpos = coord{sandpos.x-1, sandpos.y+1}
-                continue
-            }
-            if _, ok := p1grid[coord{sandpos.x+1, sandpos.y+1}]; !ok {
-                sandpos = coord{sandpos.x+1, sandpos.y+1}
-                continue
-            }
-            p1grid[sandpos] = sand
-            p1++
-            break
         }
     }
-    fmt.Println(p1)
+}
 
-    maxy += 1
-    p2 := 0
-Loop2:
+func part2(grid map[coord]cell, maxy int) (rested int) {
     for {
         sandpos := source
         for {
             if sandpos.y == maxy {
                 grid[sandpos] = sand
-                p2++
+                rested++
                 break
             }
-            if _, ok := grid[coord{sandpos.x, sandpos.y+1}]; !ok {
-                sandpos = coord{sandpos.x, sandpos.y+1}
-                continue
+            newpos, rest := simulate(grid, sandpos)
+            sandpos = newpos
+            if rest {
+                rested++
+                if sandpos == source {
+                    return rested
+                }
+                break
             }
-            if _, ok := grid[coord{sandpos.x-1, sandpos.y+1}]; !ok {
-                sandpos = coord{sandpos.x-1, sandpos.y+1}
-                continue
-            }
-            if _, ok := grid[coord{sandpos.x+1, sandpos.y+1}]; !ok {
-                sandpos = coord{sandpos.x+1, sandpos.y+1}
-                continue
-            }
-            grid[sandpos] = sand
-            p2++
-            if sandpos == source {
-                break Loop2
-            }
-            break
         }
     }
-    fmt.Println(p2)
 }
 
 func main() {
-    //lib.Test()
     day14()
 }
