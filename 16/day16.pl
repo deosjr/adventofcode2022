@@ -4,7 +4,7 @@
 :- table part2/5.
 :- dynamic transition/3.
 
-%use_test_input.
+use_test_input.
 
 parse --> eos.
 parse --> "Valve ", string_without(" ", C), " has flow rate=", integer(N),
@@ -62,7 +62,11 @@ mappart1([Valve-Cost|T], Mins, Opened, [Ans|Answers]) :-
 part1(Mins, _, _, 0) :- Mins #=< 2.
 part1(Mins, Opened, Valve, Ans) :-
     Mins #> 2,
-    findall(V-Cost, (transition(Valve, V, Cost), not(memberchk(V, Opened)), Cost #< Mins), Connected),
+    findall(V-Cost, (
+        transition(Valve, V, Cost),
+        not(memberchk(V, Opened)),
+        Cost #< Mins
+    ), Connected),
     mappart1(Connected, Mins, Opened, Scores),
     ( Scores = [] -> Ans = 0 ;
       select(Ans, Scores, Rem),
@@ -83,35 +87,45 @@ mappart2([(Me-Elephant)/(Score-NewOpened)|T], Mins, Opened, [Ans|Answers]) :-
     Ans #= Score + N,
     mappart2(T, Mins, Opened, Answers).
 
+connections(From, Mins, Opened, Connected) :-
+    findall((V-Cost)/(Score-NewO), (
+        transition(From, V, Cost),
+        not(memberchk(V, Opened)),
+        Cost #< Mins,
+        M #= Mins-Cost,
+        score(V,M,Score),
+        sort([V|Opened],NewO)
+    ), Connected).
+
 part2(Mins, _, _, _, 0) :- Mins #=< 2.
 % Elephant and I depart at the same time
 part2(Mins, Opened, Me-0, Elephant-0, Ans) :-
     Mins #> 2,
-    findall((V-Cost)/(Score-NewO), (transition(Me, V, Cost), not(memberchk(V, Opened)), Cost #< Mins, M #= Mins-Cost, score(V,M,Score), sort([V|Opened],NewO)), ConnMe),
-    findall((V-Cost)/(Score-NewO), (transition(Elephant, V, Cost), not(memberchk(V, Opened)), Cost #< Mins, M #= Mins-Cost, score(V,M,Score), sort([V|Opened],NewO)), ConnElephant),
-    findall(((VA-CA)-(VB-CB))/(S-O), (member((VA-CA)/(S1-O1), ConnMe), member((VB-CB)/(S2-O2), ConnElephant), VA \= VB, S#=S1+S2, union(O1,O2,O3),sort(O3,O)), Connected),
-    mappart2(Connected, Mins, Opened, Scores),
-    ( Scores = [] -> Ans = 0 ;
-      select(Ans, Scores, Rem),
-      maplist(#>=(Ans), Rem)
-    ).
+    connections(Me, Mins, Opened, ConnMe),
+    connections(Elephant, Mins, Opened, ConnElephant),
+    findall(((VA-CA)-(VB-CB))/(S-O), (
+        member((VA-CA)/(S1-O1), ConnMe),
+        member((VB-CB)/(S2-O2), ConnElephant),
+        VA \= VB, S#=S1+S2,
+        union(O1,O2,O3), sort(O3,O)
+    ), Connected),
+    part2ans(Connected, Mins, Opened, Ans).
 
 % I am still underway, elephant makes a move
 part2(Mins, Opened, Me-Left, Elephant-0, Ans) :-
     Mins #> 2,
-    findall((V-Cost)/(Score-NewO), (transition(Elephant, V, Cost), V\=Me, not(memberchk(V, Opened)), Cost #< Mins, M #= Mins-Cost, score(V,M,Score), sort([V|Opened],NewO)), ConnElephant),
+    connections(Elephant, Mins, Opened, ConnElephant),
     maplist({Me,Left}/[A/SO,B]>>(B=((Me-Left)-A)/SO), ConnElephant, Connected),
-    mappart2(Connected, Mins, Opened, Scores),
-    ( Scores = [] -> Ans = 0 ;
-      select(Ans, Scores, Rem),
-      maplist(#>=(Ans), Rem)
-    ).
+    part2ans(Connected, Mins, Opened, Ans).
 
 % Elephant is still underway, I make a move
 part2(Mins, Opened, Me-0, Elephant-Left, Ans) :-
     Mins #> 2,
-    findall((V-Cost)/(Score-NewO), (transition(Me, V, Cost), V\=Elephant, not(memberchk(V, Opened)), Cost #< Mins, M #= Mins-Cost, score(V,M,Score), sort([V|Opened],NewO)), ConnMe),
+    connections(Me, Mins, Opened, ConnMe),
     maplist({Elephant,Left}/[A/SO,B]>>(B=(A-(Elephant-Left))/SO), ConnMe, Connected),
+    part2ans(Connected, Mins, Opened, Ans).
+
+part2ans(Connected, Mins, Opened, Ans) :-
     mappart2(Connected, Mins, Opened, Scores),
     ( Scores = [] -> Ans = 0 ;
       select(Ans, Scores, Rem),
