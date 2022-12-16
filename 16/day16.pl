@@ -4,7 +4,7 @@
 :- table part2/5.
 :- dynamic transition/3.
 
-use_test_input.
+%use_test_input.
 
 parse --> eos.
 parse --> "Valve ", string_without(" ", C), " has flow rate=", integer(N),
@@ -79,14 +79,6 @@ normalize((X-XL)-(Y-YL), (X-0)-(Y-NYL), XL) :-
 normalize((X-XL)-(Y-YL), (X-NXL)-(Y-0), YL) :-
     YL #< XL, NXL #= XL - YL.
 
-mappart2([], _, _, []).
-mappart2([(Me-Elephant)/(Score-NewOpened)|T], Mins, Opened, [Ans|Answers]) :-
-    normalize(Me-Elephant, NewMe-NewElephant, MinsElapsed),
-    Min #= Mins - MinsElapsed,
-    part2(Min, NewOpened, NewMe, NewElephant, N),
-    Ans #= Score + N,
-    mappart2(T, Mins, Opened, Answers).
-
 connections(From, Mins, Opened, Connected) :-
     findall((V-Cost)/(Score-NewO), (
         transition(From, V, Cost),
@@ -98,32 +90,28 @@ connections(From, Mins, Opened, Connected) :-
     ), Connected).
 
 part2(Mins, _, _, _, 0) :- Mins #=< 2.
-% Elephant and I depart at the same time
-part2(Mins, Opened, Me-0, Elephant-0, Ans) :-
-    Mins #> 2,
-    connections(Me, Mins, Opened, ConnMe),
-    connections(Elephant, Mins, Opened, ConnElephant),
-    findall(((VA-CA)-(VB-CB))/(S-O), (
-        member((VA-CA)/(S1-O1), ConnMe),
-        member((VB-CB)/(S2-O2), ConnElephant),
-        VA \= VB, S#=S1+S2,
-        union(O1,O2,O3), sort(O3,O)
-    ), Connected),
-    part2ans(Connected, Mins, Opened, Ans).
-
-% I am still underway, elephant makes a move
+% Elephant and I depart at the same time OR I am still underway
+% Either way, elphant makes a move as tiebreaker
 part2(Mins, Opened, Me-Left, Elephant-0, Ans) :-
-    Mins #> 2,
+    Mins #> 2, Left #>= 0,
     connections(Elephant, Mins, Opened, ConnElephant),
     maplist({Me,Left}/[A/SO,B]>>(B=((Me-Left)-A)/SO), ConnElephant, Connected),
     part2ans(Connected, Mins, Opened, Ans).
 
 % Elephant is still underway, I make a move
 part2(Mins, Opened, Me-0, Elephant-Left, Ans) :-
-    Mins #> 2,
+    Mins #> 2, Left #> 0,
     connections(Me, Mins, Opened, ConnMe),
     maplist({Elephant,Left}/[A/SO,B]>>(B=(A-(Elephant-Left))/SO), ConnMe, Connected),
     part2ans(Connected, Mins, Opened, Ans).
+    
+mappart2([], _, _, []).
+mappart2([(Me-Elephant)/(Score-NewOpened)|T], Mins, Opened, [Ans|Answers]) :-
+    normalize(Me-Elephant, NewMe-NewElephant, MinsElapsed),
+    Min #= Mins - MinsElapsed,
+    part2(Min, NewOpened, NewMe, NewElephant, N),
+    Ans #= Score + N,
+    mappart2(T, Mins, Opened, Answers).
 
 part2ans(Connected, Mins, Opened, Ans) :-
     mappart2(Connected, Mins, Opened, Scores),

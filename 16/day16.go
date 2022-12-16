@@ -11,6 +11,23 @@ type pair struct {
     from, to string
 }
 
+type move struct {
+    me string
+    ele string
+    meLeft int
+    eleLeft int
+}
+
+func (m move) normalize() (move, int) {
+    if m.meLeft == m.eleLeft {
+        return move{m.me, m.ele, 0, 0}, m.meLeft
+    }
+    if m.meLeft < m.eleLeft {
+        return move{m.me, m.ele, 0, m.eleLeft-m.meLeft}, m.meLeft
+    }
+    return move{m.me, m.ele, m.meLeft-m.eleLeft, 0}, m.eleLeft
+}
+
 var (
     tunnels = map[string][]string{}
     flow = map[string]int{}
@@ -59,7 +76,7 @@ func part1(mins int, opened map[string]struct{}, valve string) int {
             continue
         }
         cost := transitions[pair{valve, next}]
-        if cost >= mins {
+        if cost > mins {
             continue
         }
         newmins := mins-cost-1
@@ -69,6 +86,56 @@ func part1(mins int, opened map[string]struct{}, valve string) int {
             newopened[k] = struct{}{}
         }
         total := part1(newmins, newopened, next) + score
+        if total > max {
+            max = total
+        }
+    }
+    return max
+}
+
+func part2(mins int, opened map[string]struct{}, m move) int {
+    if mins <= 2 {
+        return 0
+    }
+    max := 0
+    myTurn := m.meLeft == 0
+    newmove := move{}
+    var from string
+    if myTurn {
+        from = m.me
+        newmove.ele = m.ele
+        newmove.eleLeft = m.eleLeft
+    } else {
+        from = m.ele
+        newmove.me = m.me
+        newmove.meLeft = m.meLeft
+    }
+    for next, f := range flow {
+        if f == 0 {
+            continue
+        }
+        if _, ok := opened[next]; ok {
+            continue
+        }
+        cost := transitions[pair{from, next}]
+        if cost > mins {
+            continue
+        }
+        newmins := mins-cost-1
+        score := f * newmins
+        if myTurn {
+            newmove.me = next
+            newmove.meLeft = cost+1
+        } else {
+            newmove.ele = next
+            newmove.eleLeft = cost+1
+        }
+        newm, elapsed := newmove.normalize()
+        newopened := map[string]struct{}{next:{}}
+        for k := range opened {
+            newopened[k] = struct{}{}
+        }
+        total := part2(mins-elapsed, newopened, newm) + score
         if total > max {
             max = total
         }
@@ -94,9 +161,11 @@ func day16() {
     }
     ans1 := part1(30, map[string]struct{}{}, "AA")
     lib.WritePart1("%d", ans1)
+    ans2 := part2(26, map[string]struct{}{}, move{"AA", "AA", 0, 0})
+    lib.WritePart2("%d", ans2)
 }
 
 func main() {
-    lib.Test()
+    //lib.Test()
     day16()
 }
