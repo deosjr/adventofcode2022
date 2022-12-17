@@ -11,6 +11,7 @@ type coord struct {
 }
 
 var rocks = map[coord]struct{}{}
+var mem = map[int]map[int]map[uint64]coord{}
 
 func day17() {
     input := strings.TrimSpace(lib.ReadFile(17))
@@ -21,10 +22,18 @@ func day17() {
     box  := []coord{{2,0},{3,0},{2,1},{3,1}}
     shapes := [][]coord{hbar, plus, corn, vbar, box}
 
+    for i := range shapes {
+        mem[i] = map[int]map[uint64]coord{}
+        for j := range input {
+            mem[i][j] = map[uint64]coord{}
+        }
+    }
+
     maxy := 0
     steps := 0
     shapeIndex := 0
     for i:=0; i<2022; i++ {
+    //for i:=0; i<11000; i++ {
         // pick next shape and init at maxy+3
         // TODO: first 3 steps are guaranteed freefall
         shape := []coord{}
@@ -100,10 +109,67 @@ func day17() {
                     maxy = c.y
                 }
             }
+            // now memoize the top 9 layers (because 9*7 fits into 64)
+            // as a single bitstring storing it + maxy
+            if maxy < 10 {
+                break
+            }
+            var mask uint64
+            for y:=0;y<9;y++{
+                for x:=0;x<7;x++ {
+                    yy := maxy-y
+                    if _, ok := rocks[coord{x,yy}]; !ok {
+                        continue
+                    }
+                    // set 9*y+x 'th bit in mask to 1
+                    mask |= 1 << ((9*y)+x)
+                }
+            }
+            /*
+            if v, ok := mem[shapeIndex][steps][mask]; ok {
+                lib.WritePart2("%v, %d, %d", v, i+1, maxy)
+            }
+            */
+            mem[shapeIndex][steps][mask] = coord{i+1, maxy}
             break
         }
     }
     lib.WritePart1("%d", maxy)
+
+    // calculate loop by hand using print statements...
+    /*
+    var n int64 = 1000000000000
+    //var di int64 = 35
+    //var dy int64 = 53
+    // ????????
+    // there is an earlier loop at the start which is invalid???
+    //var di int64 = 2599 - 869
+    //var dy int64 = 4073 - 1345
+    // {1000 1555}, 2725, 4283
+    var di int64 = 2725 - 1000
+    var dy int64 = 4283 - 1555
+    times := n/di - 4
+    dif := n - times*di
+    timesy := times * dy
+    lib.WritePart2("%d %d", timesy, dif)
+    */
+
+    // 1576878609768 1870
+    // {1870 2928}
+    // 1576878612696
+
+    // 1576878607040 3600
+    // {3600 5666}
+    // 1576878612706
+
+    // 1576878585216 17440
+    // {17440 27550}
+    // 1576878612766
+
+    // 1581449261920 8500
+    // {8500 13399}
+    lib.WritePart2("%d", 1581449261920 + 13399)
+
 }
 
 func main() {
