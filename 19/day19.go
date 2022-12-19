@@ -32,9 +32,22 @@ type state struct {
 }
 
 func (s state) advance(minutes int) state {
+    b := input[s.blueprint]
     newres := [4]int{}
     for i, r := range s.resources {
         newres[i] = r + minutes * s.robots[i]
+        // TODO: normalize: if you have more resources then you can spend
+        // then you can throw away the excess to cut down the state space 
+        // (thank you u/jonathan_paulson)
+        if i == 0 && newres[i] > 2*b.maxOre {
+            newres[0] = 2*b.maxOre
+        }
+        if i == 1 && newres[i] > 3*b.costs[obsidian][clay] {
+            newres[1] = 3*b.costs[obsidian][clay]
+        }
+        if i == 2 && newres[i] > 3*b.costs[geode][obsidian] {
+            newres[2] = 3*b.costs[geode][obsidian]
+        }
     }
     return state{
         minutes:        s.minutes - minutes,
@@ -104,12 +117,20 @@ func plan(s state) int {
     if v, ok := mem[s]; ok {
         return v
     }
+    b := input[s.blueprint]
+    // NOTE: if we can build a geode robot every turn, we can calculate the optimal score easily
+    // doesn't seem to speed things up though, perhaps because Im doing recursion instead of DFS?
+    if s.robots[ore] == b.costs[geode][ore] && s.robots[obsidian] == b.costs[geode][obsidian] {
+        n := s.resources[geode] + (s.minutes * (s.minutes+1))/2
+        mem[s] = n
+        return n
+    }
     // find possible robots to build
     // branch off recursion for each
     // don't build more than max needed of resource per build
     // if no possible moves: return number of geodes
-    b := input[s.blueprint]
     moves := []state{}
+
     // can we build an ore robot in time?
     if s.robots[ore] < b.maxOre {
         move, ok := s.canBuild(ore)
@@ -187,13 +208,9 @@ func day19() {
     }
     lib.WritePart1("%d", sum)
 
-    //n1 := plan(state{minutes:32, blueprint:0, robots:[4]int{1,0,0,0}}) // 46
-    //lib.WritePart2("%d", n1)
-    //n2 := plan(state{minutes:32, blueprint:1, robots:[4]int{1,0,0,0}}) // 10
-    //lib.WritePart2("%d", n2)
-    //n3 := plan(state{minutes:32, blueprint:2, robots:[4]int{1,0,0,0}}) // 69
-    //lib.WritePart2("%d", n3)
-
+    n1 := plan(state{minutes:32, blueprint:0, robots:[4]int{1,0,0,0}}) // 46
+    n2 := plan(state{minutes:32, blueprint:1, robots:[4]int{1,0,0,0}}) // 10
+    n3 := plan(state{minutes:32, blueprint:2, robots:[4]int{1,0,0,0}}) // 69
     lib.WritePart2("%d", n1*n2*n3)
 }
 
