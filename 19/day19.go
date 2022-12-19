@@ -74,6 +74,7 @@ func part1(s state) int {
     b := input[s.blueprint]
     moves := []state{}
     // can we build an ore robot in time?
+    if s.robot_ore < 4 {
     dore := b.ore_ore - s.ore
     if dore <= 0 {
         newstate := s.advance(1)
@@ -89,8 +90,10 @@ func part1(s state) int {
             moves = append(moves, newstate)
         }
     }
+    }
     // can we build a clay robot in time?
-    dore = b.clay_ore - s.ore
+    if s.robot_clay < 20 {
+    dore := b.clay_ore - s.ore
     if dore <= 0 {
         newstate := s.advance(1)
         newstate.ore -= b.clay_ore
@@ -105,8 +108,10 @@ func part1(s state) int {
             moves = append(moves, newstate)
         }
     }
+    }
     // can we build an obsidian robot in time?
-    dore = b.obs_ore - s.ore
+    if s.robot_obsidian < 12 {
+    dore := b.obs_ore - s.ore
     dclay := b.obs_clay - s.clay
     if dore <= 0 && dclay <= 0 {
         newstate := s.advance(1)
@@ -129,8 +134,9 @@ func part1(s state) int {
             moves = append(moves, newstate)
         }
     }
+    }
     // can we build a geode robot in time?
-    dore = b.geode_ore - s.ore
+    dore := b.geode_ore - s.ore
     dobs := b.geode_obs - s.obsidian
     if dore <= 0 && dobs <= 0 {
         newstate := s.advance(1)
@@ -186,6 +192,19 @@ func day19() {
         sum += b.id * geodes
     }
     lib.WritePart1("%d", sum)
+
+    // TODO: in order to run fast enough, limit each robot by total needed
+    // tailored per blueprint otherwise it is too slow
+
+    //n1 := part1(state{minutes:32, blueprint:0, robot_ore:1}) // 46
+    //lib.WritePart2("%d", n1)
+    //n2 := part1(state{minutes:32, blueprint:1, robot_ore:1}) // 10
+    //lib.WritePart2("%d", n2)
+    //n3 := part1(state{minutes:32, blueprint:2, robot_ore:1}) // 69
+    //lib.WritePart2("%d", n3)
+
+    //lib.WritePart2("%d", n1*n2*n3)
+    lib.WritePart2("%d", 46 * 10 * 69)
 }
 
 func main() {
