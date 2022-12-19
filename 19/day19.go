@@ -7,14 +7,19 @@ import (
 	"github.com/deosjr/adventofcode2022/lib"
 )
 
+type resource int
+
+const (
+    ore resource = iota
+    clay
+    obsidian
+    geode
+)
+
 type blueprint struct {
-    id          int
-    ore_ore     int
-    clay_ore    int
-    obs_ore     int
-    obs_clay    int
-    geode_ore   int
-    geode_obs   int
+    id              int
+    costs           [4][3]int
+    maxOre          int
 }
 
 var input = []blueprint{}
@@ -22,31 +27,20 @@ var input = []blueprint{}
 type state struct {
     minutes         int
     blueprint       int
-    ore             int
-    clay            int
-    obsidian        int
-    geode           int
-    robot_ore       int
-    robot_clay      int
-    robot_obsidian  int
-    robot_geode     int
+    resources       [4]int
+    robots          [4]int
 }
 
 func (s state) advance(minutes int) state {
-    if s.minutes < minutes {
-        panic(fmt.Sprintf("%d-%d", s.minutes, minutes))
+    newres := [4]int{}
+    for i, r := range s.resources {
+        newres[i] = r + minutes * s.robots[i]
     }
     return state{
         minutes:        s.minutes - minutes,
         blueprint:      s.blueprint,
-        ore:            s.ore + minutes * s.robot_ore,
-        clay:           s.clay + minutes * s.robot_clay,
-        obsidian:       s.obsidian + minutes * s.robot_obsidian,
-        geode:          s.geode + minutes * s.robot_geode,
-        robot_ore:      s.robot_ore,
-        robot_clay:     s.robot_clay,
-        robot_obsidian: s.robot_obsidian,
-        robot_geode:    s.robot_geode,
+        resources:      newres,
+        robots:         s.robots,
     }
 }
 
@@ -58,121 +52,121 @@ func neededMins(left, robots int) int {
     return div + 1
 }
 
+func (s state) canBuild(robot resource) (state, bool) {
+    b := input[s.blueprint]
+    cost := b.costs[robot]
+    var other int
+    for i, c := range cost {
+        if c != 0 {
+            other = i
+        }
+    }
+
+    oreDiff := cost[ore] - s.resources[ore]
+    otherDiff := cost[other] - s.resources[other]
+    if oreDiff <= 0 && otherDiff <= 0 {
+        newstate := s.advance(1)
+        newstate.resources[ore] -= cost[ore]
+        if other > 0 {
+            newstate.resources[other] -= cost[other]
+        }
+        newstate.robots[robot] += 1
+        return newstate, true
+    }
+    if s.robots[other] <= 0 {
+        return state{}, false
+    }
+
+    diffMinsOre := neededMins(oreDiff, s.robots[ore])
+    diffMinsOther := neededMins(otherDiff, s.robots[other])
+    diffMinutes := diffMinsOre
+    if diffMinsOther > diffMinutes {
+        diffMinutes = diffMinsOther
+    }
+    if diffMinutes >= s.minutes {
+        return state{}, false
+    }
+    newstate := s.advance(diffMinutes+1)
+    newstate.resources[ore] -= cost[ore]
+    if other > 0 {
+        newstate.resources[other] -= cost[other]
+    }
+    newstate.robots[robot] += 1
+    return newstate, true
+}
+
 var mem = map[state]int{}
 
-// TODO: memoize on state
-func part1(s state) int {
+func plan(s state) int {
     if s.minutes == 0 {
-        return s.geode
+        return s.resources[geode]
     }
     if v, ok := mem[s]; ok {
         return v
     }
     // find possible robots to build
     // branch off recursion for each
+    // don't build more than max needed of resource per build
     // if no possible moves: return number of geodes
     b := input[s.blueprint]
     moves := []state{}
     // can we build an ore robot in time?
-    if s.robot_ore < 4 {
-    dore := b.ore_ore - s.ore
-    if dore <= 0 {
-        newstate := s.advance(1)
-        newstate.ore -= b.ore_ore
-        newstate.robot_ore += 1
-        moves = append(moves, newstate)
-    } else {
-        dmin := neededMins(dore, s.robot_ore)
-        if dmin < s.minutes {
-            newstate := s.advance(dmin+1)
-            newstate.ore -= b.ore_ore
-            newstate.robot_ore += 1
-            moves = append(moves, newstate)
+    if s.robots[ore] < b.maxOre {
+        move, ok := s.canBuild(ore)
+        if ok {
+            moves = append(moves, move)
         }
     }
-    }
-    // can we build a clay robot in time?
-    if s.robot_clay < 20 {
-    dore := b.clay_ore - s.ore
-    if dore <= 0 {
-        newstate := s.advance(1)
-        newstate.ore -= b.clay_ore
-        newstate.robot_clay += 1
-        moves = append(moves, newstate)
-    } else {
-        dmin := neededMins(dore, s.robot_ore)
-        if dmin < s.minutes {
-            newstate := s.advance(dmin+1)
-            newstate.ore -= b.clay_ore
-            newstate.robot_clay += 1
-            moves = append(moves, newstate)
+    // can we build a clay robot in time? (only obsidian costs clay)
+    if s.robots[clay] < b.costs[obsidian][clay] {
+        move, ok := s.canBuild(clay)
+        if ok {
+            moves = append(moves, move)
         }
     }
-    }
-    // can we build an obsidian robot in time?
-    if s.robot_obsidian < 12 {
-    dore := b.obs_ore - s.ore
-    dclay := b.obs_clay - s.clay
-    if dore <= 0 && dclay <= 0 {
-        newstate := s.advance(1)
-        newstate.ore -= b.obs_ore
-        newstate.clay -= b.obs_clay
-        newstate.robot_obsidian += 1
-        moves = append(moves, newstate)
-    } else if s.robot_clay > 0 {
-        dmin_ore := neededMins(dore, s.robot_ore)
-        dmin_clay := neededMins(dclay, s.robot_clay)
-        dmin := dmin_ore
-        if dmin < dmin_clay {
-            dmin = dmin_clay
+    // can we build an obsidian robot in time? (only geode costs obsidian)
+    if s.robots[obsidian] < b.costs[geode][obsidian] {
+        move, ok := s.canBuild(obsidian)
+        if ok {
+            moves = append(moves, move)
         }
-        if dmin < s.minutes {
-            newstate := s.advance(dmin+1)
-            newstate.ore -= b.obs_ore
-            newstate.clay -= b.obs_clay
-            newstate.robot_obsidian += 1
-            moves = append(moves, newstate)
-        }
-    }
     }
     // can we build a geode robot in time?
-    dore := b.geode_ore - s.ore
-    dobs := b.geode_obs - s.obsidian
-    if dore <= 0 && dobs <= 0 {
-        newstate := s.advance(1)
-        newstate.ore -= b.geode_ore
-        newstate.obsidian -= b.geode_obs
-        newstate.robot_geode += 1
-        moves = append(moves, newstate)
-    } else if s.robot_obsidian > 0 {
-        dmin_ore := neededMins(dore, s.robot_ore)
-        dmin_obs := neededMins(dobs, s.robot_obsidian)
-        dmin := dmin_ore
-        if dmin < dmin_obs {
-            dmin = dmin_obs
-        }
-        if dmin < s.minutes {
-            newstate := s.advance(dmin+1)
-            newstate.ore -= b.geode_ore
-            newstate.obsidian -= b.geode_obs
-            newstate.robot_geode += 1
-            moves = append(moves, newstate)
-        }
+    move, ok := s.canBuild(geode)
+    if ok {
+        moves = append(moves, move)
     }
+
     if len(moves) == 0 {
         endstate := s.advance(s.minutes)
-        mem[s] = endstate.geode
-        return endstate.geode
+        mem[s] = endstate.resources[geode]
+        return endstate.resources[geode]
     }
     max := 0
     for _, m := range moves {
-        n := part1(m)
+        n := plan(m)
         if n > max {
             max = n
         }
     }
     mem[s] = max
     return max
+}
+
+func newBlueprint(id, oreore, clayore, obsore, obsclay, gore, gobs int) blueprint {
+    maxore := oreore
+    if clayore > maxore { maxore = clayore }
+    if obsore > maxore { maxore = obsore }
+    if gore > maxore { maxore = gore }
+    oreCost := [3]int{oreore,0,0}
+    clayCost := [3]int{clayore,0,0}
+    obsCost := [3]int{obsore,obsclay,0}
+    geodeCost := [3]int{gore,0,gobs}
+    return blueprint{
+        id: id,
+        maxOre: maxore,
+        costs: [4][3]int{oreCost, clayCost, obsCost, geodeCost},
+    }
 }
 
 func day19() {
@@ -183,31 +177,26 @@ func day19() {
         fmt.Sscanf(dotsplit[1], "Each clay robot costs %d ore", &clayore)
         fmt.Sscanf(dotsplit[2], "Each obsidian robot costs %d ore and %d clay", &obsore, &obsclay)
         fmt.Sscanf(dotsplit[3], "Each geode robot costs %d ore and %d obsidian", &gore, &gobs)
-        input = append(input, blueprint{id, oreore, clayore, obsore, obsclay, gore, gobs})
+        input = append(input, newBlueprint(id, oreore, clayore, obsore, obsclay, gore, gobs))
     })
 
     sum := 0
     for i, b := range input {
-        geodes := part1(state{minutes:24, blueprint:i, robot_ore:1})
+        geodes := plan(state{minutes:24, blueprint:i, robots:[4]int{1,0,0,0}})
         sum += b.id * geodes
     }
     lib.WritePart1("%d", sum)
 
-    // TODO: in order to run fast enough, limit each robot by total needed
-    // tailored per blueprint otherwise it is too slow
-
-    //n1 := part1(state{minutes:32, blueprint:0, robot_ore:1}) // 46
+    //n1 := plan(state{minutes:32, blueprint:0, robots:[4]int{1,0,0,0}}) // 46
     //lib.WritePart2("%d", n1)
-    //n2 := part1(state{minutes:32, blueprint:1, robot_ore:1}) // 10
+    //n2 := plan(state{minutes:32, blueprint:1, robots:[4]int{1,0,0,0}}) // 10
     //lib.WritePart2("%d", n2)
-    //n3 := part1(state{minutes:32, blueprint:2, robot_ore:1}) // 69
+    //n3 := plan(state{minutes:32, blueprint:2, robots:[4]int{1,0,0,0}}) // 69
     //lib.WritePart2("%d", n3)
 
-    //lib.WritePart2("%d", n1*n2*n3)
-    lib.WritePart2("%d", 46 * 10 * 69)
+    lib.WritePart2("%d", n1*n2*n3)
 }
 
 func main() {
-    //lib.Test()
     day19()
 }
