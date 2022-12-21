@@ -1,5 +1,7 @@
 :- ['../lib/io.pl'].
 
+:- dynamic find/2.
+
 parse --> eos.
 parse --> parse_monkey(M), ": ", integer(N), "\n", parse,
     {assertz(monkey(M, N))}.
@@ -12,19 +14,25 @@ op(-,X,Y,Z) :- Z #= X - Y.
 op(*,X,Y,Z) :- Z #= X * Y.
 op(/,X,Y,Z) :- Z #= X // Y.
 
+find(Node, X) :-
+    Body = (monkey(A,_), monkey(B,_), op(Op,_,_,_)),
+    ( Node = A, Other = B ; Node = B, Other = A ),
+    clause(monkey(Parent, N), Body),
+    monkey(Other, Y),
+    ( Node = A ->
+      op(Op, X, Y, N) ; 
+      op(Op, Y, X, N)
+    ),
+    find(Parent, N).
+
 run :-
     input_stream(21, parse),
     monkey(root, Ans1),
     write_part1(Ans1),
     clause(monkey(root, _), Body),
     Body = (monkey(A,_), monkey(B,_), _),
-    retractall(monkey(root, _)),
-    assertz((monkey(root, X) :- monkey(A,X), monkey(B,X))),
-    retractall(monkey(humn, _)),
-    % TODO: write X instead of manual binary search...
-    X in 3876027195000..3876027200000,
-    label([X]),
-    assertz(monkey(humn, X)),
-    ( monkey(root, _) -> true ;
-      retractall(monkey(humn, _)), fail ),
-    write_part2(X).
+    asserta((find(A,X) :- monkey(B,X))),
+    asserta((find(B,X) :- monkey(A,X))),
+    find(humn, Ans2),
+    label([Ans2]),
+    write_part2(Ans2).
