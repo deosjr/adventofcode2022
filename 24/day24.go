@@ -25,9 +25,8 @@ var dirs = []coord{{0, -1}, {0, 1}, {-1, 0}, {1, 0}}
 type valley struct {
     minx, maxx int
     miny, maxy int
-    start, end coord
     blizzards map[coord]int
-    endmin int
+    start, end coord
 }
 
 type node struct {
@@ -67,9 +66,6 @@ func (v *valley) Neighbours(n node) []node {
 		{x, y + 1},
 		{x + 1, y},
     }
-    if manhattan(n.c, v.end) + n.minute > v.endmin {
-        return points
-    }
     for _, p2d := range points2d {
         if p2d.x == v.start.x && p2d.y == v.start.y {
 	        points = append(points, node{p2d, n.minute+1})
@@ -99,6 +95,10 @@ func (v *valley) G(p, n node) float64 {
 
 func (*valley) H(p, q node) float64 {
     return float64(manhattan(p.c, q.c))
+}
+
+func (*valley) IsGoal(n, g node) bool {
+    return n.c == g.c
 }
 
 func manhattan(p, q coord) int {
@@ -143,35 +143,20 @@ func day24() {
             }
         }
     }
-    var p1, back, p2 int
-    var v Map[node] = &valley{minx-1, maxx-1, miny, maxy-2, start, end, blizzards, 0}
-    for i:=manhattan(start, end); i<1000; i++ {
-        v.(*valley).endmin = i
-        route, _ := FindRoute(v, node{start, 0}, node{end, i})
-        if len(route) != 0 {
-            p1 = len(route)-1
-            break
-        }
-    }
+
+    // TODO: without this indirect declaration I run into (?):
+    // type *valley of mn does not match inferred type Map[node] for Map[T]
+    v := &valley{minx-1, maxx-1, miny, maxy-2, blizzards, start, end}
+    var mn Map[node] = v
+    route, _ := FindRoute(mn, node{start, 0}, node{c: end})
+    p1 := len(route)-1
     lib.WritePart1("%d", p1)
-    v.(*valley).start, v.(*valley).end = v.(*valley).end, v.(*valley).start
-    for i:=p1; i<1000; i++ {
-        v.(*valley).endmin = i
-        route, _ := FindRoute(v, node{end, p1}, node{start, i})
-        if len(route) != 0 {
-            back = len(route)-1
-            break
-        }
-    }
-    v.(*valley).start, v.(*valley).end = v.(*valley).end, v.(*valley).start
-    for i:=p1+back; i<1000; i++ {
-        v.(*valley).endmin = i
-        route, _ := FindRoute(v, node{start, p1+back}, node{end, i})
-        if len(route) != 0 {
-            p2 = len(route)-1
-            break
-        }
-    }
+
+    route, _ = FindRoute(mn, node{end, p1}, node{c: start})
+    back := len(route)-1
+
+    route, _ = FindRoute(mn, node{start, p1+back}, node{c: end})
+    p2 := len(route)-1
     lib.WritePart2("%d", p1+back+p2)
 }
 
@@ -193,6 +178,11 @@ type Map[T comparable] interface {
 	// heuristic cost estimate function:
 	// cost of cheapest path from n to goal
 	H(n, goal T) float64
+
+    // we need T:comparable in order to store nodes in maps but sometimes we don't want to
+    // check goal for full state such as when we include stepnumber in state but want to find
+    // least amount of steps instead of goal with exactly X number of steps
+    IsGoal(n, goal T) bool
 }
 
 func FindRoute[T comparable](m Map[T], start, goal T) ([]T, error) {
@@ -220,6 +210,8 @@ func FindRoute[T comparable](m Map[T], start, goal T) ([]T, error) {
 
 	// use goalScore when you want to be able to revisit goal
 	// instead of returning the first path found
+    // TODO: if IsGoal does not do a complete comparison, using goalScore
+    // makes reconstructPath not find a path (since it looks by exact goal)
 	goalScore := float64(math.MaxInt64)
 
 	for pq.Len() != 0 {
@@ -228,9 +220,9 @@ func FindRoute[T comparable](m Map[T], start, goal T) ([]T, error) {
 			break
 		}
 		current := item.node
-		if current == goal {
-			goalScore = gScore[current]
-			// return reconstructPath(cameFrom, current), nil
+		if m.IsGoal(current, goal) {
+			//goalScore = gScore[current]
+			return reconstructPath(cameFrom, current), nil
 		}
 
 		// note: nodes can never be revisited if closedSet is used
@@ -265,10 +257,10 @@ func FindRoute[T comparable](m Map[T], start, goal T) ([]T, error) {
 		}
 	}
 
-	if goalScore == math.MaxInt64 {
+	//if goalScore == math.MaxInt64 {
 		return nil, fmt.Errorf("No path found")
-	}
-	return reconstructPath(cameFrom, goal), nil
+	//}
+	//return reconstructPath(cameFrom, goal), nil
 }
 
 func reconstructPath[T comparable](m map[T]T, current T) []T {
